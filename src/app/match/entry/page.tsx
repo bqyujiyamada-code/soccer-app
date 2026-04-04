@@ -6,6 +6,7 @@ import Link from "next/link";
 export default function MatchEntry() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
+  const [uploading, setUploading] = useState(false);
 
   // 入力データ一式
   const [formData, setFormData] = useState({
@@ -16,17 +17,65 @@ export default function MatchEntry() {
     opponent: "",
     scoreUs: "",
     scoreThem: "",
-    hasPK: false, // PKがあったかどうかのスイッチ
+    hasPK: false,
     pkScoreUs: "",
     pkScoreThem: "",
     myGoals: "0",
     myAssists: "0",
+    images: [] as { key: string; url: string }[], // 画像URLの配列を追加
   });
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value, type } = e.target;
     const val = type === "checkbox" ? (e.target as HTMLInputElement).checked : value;
     setFormData(prev => ({ ...prev, [name]: val }));
+  };
+
+  // 画像アップロード処理
+  const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files) return;
+    setUploading(true);
+
+    const files = Array.from(e.target.files);
+    const bucketName = process.env.NEXT_PUBLIC_AWS_S3_BUCKET_NAME;
+
+    for (const file of files) {
+      try {
+        // 1. 署名付きURLを取得
+        const res = await fetch("/api/upload", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ filename: file.name, contentType: file.type }),
+        });
+        const { signedUrl, fileKey } = await res.json();
+
+        // 2. S3へ直接アップロード
+        await fetch(signedUrl, {
+          method: "PUT",
+          body: file,
+          headers: { "Content-Type": file.type },
+        });
+
+        // 3. プレビュー用URLを作成してStateに追加
+        const publicUrl = `https://${bucketName}.s3.ap-northeast-1.amazonaws.com/${fileKey}`;
+        setFormData(prev => ({
+          ...prev,
+          images: [...prev.images, { key: fileKey, url: publicUrl }]
+        }));
+      } catch (err) {
+        console.error("Upload error:", err);
+        alert("画像のアップロードに失敗しました。");
+      }
+    }
+    setUploading(false);
+  };
+
+  // 画像削除処理
+  const removeImage = (index: number) => {
+    setFormData(prev => ({
+      ...prev,
+      images: prev.images.filter((_, i) => i !== index)
+    }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -41,11 +90,11 @@ export default function MatchEntry() {
       });
 
       if (res.ok) {
-        alert("試合結果を記録しました！⚽️");
-        router.push("/match/history"); // まだ作っていませんが、次は履歴画面へ！
+        alert("試合結果と画像を記録しました！⚽️");
+        router.push("/match/history");
       }
     } catch (err) {
-      alert("エラーがおきました。");
+      alert("保存中にエラーがおきました。");
     } finally {
       setLoading(false);
     }
@@ -60,7 +109,7 @@ export default function MatchEntry() {
           </h1>
 
           <form onSubmit={handleSubmit} className="space-y-5">
-            {/* 基本情報 */}
+            {/* 基本情報、大会名、スコア入力はそのまま維持 */}
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-xs font-bold text-slate-500 mb-1">日付</label>
@@ -78,14 +127,13 @@ export default function MatchEntry() {
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-slate-500 mb-1">大会名 / ステップ（予選など）</label>
+              <label className="block text-xs font-bold text-slate-500 mb-1">大会名 / ステップ</label>
               <div className="flex gap-2">
                 <input type="text" name="tournamentName" placeholder="大会名" value={formData.tournamentName} onChange={handleChange} className="flex-[2] p-3 bg-slate-100 rounded-xl text-sm outline-none" required />
                 <input type="text" name="matchStep" placeholder="予選等" value={formData.matchStep} onChange={handleChange} className="flex-[1] p-3 bg-slate-100 rounded-xl text-sm outline-none" />
               </div>
             </div>
 
-            {/* 対戦相手とスコア */}
             <div className="bg-blue-50 p-4 rounded-2xl border border-blue-100">
               <label className="block text-xs font-bold text-blue-600 mb-2 text-center underline">対戦相手</label>
               <input type="text" name="opponent" placeholder="相手チーム名" value={formData.opponent} onChange={handleChange} className="w-full p-3 mb-4 rounded-xl text-center font-bold outline-none border-2 border-transparent focus:border-blue-400" required />
@@ -102,14 +150,11 @@ export default function MatchEntry() {
                 </div>
               </div>
 
-              {/* PK戦スイッチ */}
               <div className="mt-6 pt-4 border-t border-blue-200 flex flex-col items-center">
                 <label className="flex items-center gap-2 cursor-pointer">
                   <input type="checkbox" name="hasPK" checked={formData.hasPK} onChange={handleChange} className="w-5 h-5 accent-blue-600" />
                   <span className="text-sm font-bold text-blue-700">PK戦になった</span>
                 </label>
-
-                {/* PKスコア（チェックした時だけ表示） */}
                 {formData.hasPK && (
                   <div className="mt-3 flex items-center gap-3 animate-in fade-in zoom-in duration-200">
                     <input type="number" name="pkScoreUs" value={formData.pkScoreUs} onChange={handleChange} className="w-12 p-2 text-center rounded-lg border border-blue-300 font-bold" placeholder="PK" />
@@ -117,6 +162,38 @@ export default function MatchEntry() {
                     <input type="number" name="pkScoreThem" value={formData.pkScoreThem} onChange={handleChange} className="w-12 p-2 text-center rounded-lg border border-blue-300 font-bold" placeholder="PK" />
                   </div>
                 )}
+              </div>
+            </div>
+
+            {/* --- 画像アップロードセクション --- */}
+            <div className="bg-slate-50 p-4 rounded-2xl border border-dashed border-slate-300">
+              <label className="block text-xs font-bold text-slate-500 mb-2 flex items-center gap-2">
+                📸 写真の追加（複数OK）
+              </label>
+              <input 
+                type="file" 
+                multiple 
+                accept="image/*" 
+                onChange={handleImageChange}
+                className="w-full text-xs text-slate-500 file:mr-3 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-bold file:bg-blue-100 file:text-blue-700 hover:file:bg-blue-200 cursor-pointer"
+              />
+              
+              {uploading && <p className="text-blue-600 text-[10px] mt-2 animate-pulse font-bold">⌛ アップロード中...</p>}
+
+              {/* プレビュー表示エリア */}
+              <div className="grid grid-cols-3 gap-2 mt-4">
+                {formData.images.map((img, index) => (
+                  <div key={index} className="relative aspect-square rounded-lg overflow-hidden shadow-sm border border-slate-200 group">
+                    <img src={img.url} alt="preview" className="object-cover w-full h-full" />
+                    <button
+                      type="button"
+                      onClick={() => removeImage(index)}
+                      className="absolute top-0 right-0 bg-red-500/80 text-white w-6 h-6 flex items-center justify-center text-xs font-bold rounded-bl-lg hover:bg-red-600 transition-colors"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                ))}
               </div>
             </div>
 
@@ -132,7 +209,7 @@ export default function MatchEntry() {
               </div>
             </div>
 
-            <button disabled={loading} className="w-full py-4 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl font-black text-xl shadow-lg active:scale-95 transition-all">
+            <button disabled={loading || uploading} className="w-full py-4 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl font-black text-xl shadow-lg active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed">
               {loading ? "保存中..." : "試合をきろくする"}
             </button>
           </form>
