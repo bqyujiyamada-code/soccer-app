@@ -1,10 +1,10 @@
+import { NextResponse } from "next/server";
 import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
 import { DynamoDBDocumentClient, PutCommand } from "@aws-sdk/lib-dynamodb";
-import { NextResponse } from "next/server";
-import { v4 as uuidv4 } from "uuid"; // ID生成ツール
+import { v4 as uuidv4 } from "uuid";
 
 const client = new DynamoDBClient({
-  region: "ap-northeast-1",
+  region: process.env.AWS_REGION || "ap-northeast-1",
   credentials: {
     accessKeyId: process.env.AWS_ACCESS_KEY_ID!,
     secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!,
@@ -15,32 +15,37 @@ const docClient = DynamoDBDocumentClient.from(client);
 
 export async function POST(request: Request) {
   try {
-    const data = await request.json();
+    const formData = await request.json();
+    const tableName = process.env.DYNAMODB_TABLE_NAME;
+
+    if (!tableName) {
+      throw new Error("DYNAMODB_TABLE_NAME が設定されていません");
+    }
+
+    // 保存するデータの組み立て
+    const item = {
+      id: uuidv4(), // パーティションキー（DynamoDBの設定に合わせて変更してください）
+      ...formData,
+      createdAt: new Date().toISOString(),
+    };
 
     const command = new PutCommand({
-      TableName: "MatchResult",
-      Item: {
-        id: uuidv4(),             // 毎回違うIDを自動で作る
-        date: data.date,          // 日付
-        matchType: data.matchType, // 試合種別
-        tournamentName: data.tournamentName, // 大会名
-        matchStep: data.matchStep, // ステップ
-        opponent: data.opponent,   // 対戦チーム
-        scoreUs: Number(data.scoreUs),     // 自チーム得点
-        scoreThem: Number(data.scoreThem), // 相手チーム得点
-        hasPK: data.hasPK || false,        // PK戦があったか
-        pkScoreUs: data.hasPK ? Number(data.pkScoreUs) : null,
-        pkScoreThem: data.hasPK ? Number(data.pkScoreThem) : null,
-        myGoals: Number(data.myGoals),     // 息子の得点
-        myAssists: Number(data.myAssists), // 息子のアシスト
-        createdAt: new Date().toISOString(),
-      },
+      TableName: tableName,
+      Item: item,
     });
 
     await docClient.send(command);
+
     return NextResponse.json({ message: "Success" });
-  } catch (error) {
+  } catch (error: any) {
     console.error("DynamoDB Save Error:", error);
-    return NextResponse.json({ error: "Failed to save" }, { status: 500 });
+    return NextResponse.json(
+      { 
+        error: "保存失敗", 
+        detail: error.message,
+        code: error.__type // AWS特有のエラーコードを返す
+      }, 
+      { status: 500 }
+    );
   }
 }
