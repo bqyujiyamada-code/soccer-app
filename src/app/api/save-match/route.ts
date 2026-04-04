@@ -18,7 +18,7 @@ export async function POST(request: Request) {
     const data = await request.json();
 
     const command = new PutCommand({
-      TableName: "MatchResults",
+      TableName: "MatchResult",
       Item: {
         id: uuidv4(),             // 毎回違うIDを自動で作る
         date: data.date,          // 日付
