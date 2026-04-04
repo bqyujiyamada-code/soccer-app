@@ -22,7 +22,7 @@ export default function MatchEntry() {
     pkScoreThem: "",
     myGoals: "0",
     myAssists: "0",
-    images: [] as { key: string; url: string }[], // 画像URLの配列を追加
+    images: [] as { key: string; url: string }[],
   });
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
@@ -41,7 +41,6 @@ export default function MatchEntry() {
 
     for (const file of files) {
       try {
-        // 1. 署名付きURLを取得
         const res = await fetch("/api/upload", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -49,14 +48,12 @@ export default function MatchEntry() {
         });
         const { signedUrl, fileKey } = await res.json();
 
-        // 2. S3へ直接アップロード
         await fetch(signedUrl, {
           method: "PUT",
           body: file,
           headers: { "Content-Type": file.type },
         });
 
-        // 3. プレビュー用URLを作成してStateに追加
         const publicUrl = `https://${bucketName}.s3.ap-northeast-1.amazonaws.com/${fileKey}`;
         setFormData(prev => ({
           ...prev,
@@ -70,7 +67,6 @@ export default function MatchEntry() {
     setUploading(false);
   };
 
-  // 画像削除処理
   const removeImage = (index: number) => {
     setFormData(prev => ({
       ...prev,
@@ -78,8 +74,10 @@ export default function MatchEntry() {
     }));
   };
 
+  // 【重要】送信処理（デバッグ用ログ付き）
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    console.log("🚀 送信ボタンが押されました！送信データ:", formData);
     setLoading(true);
 
     try {
@@ -89,12 +87,19 @@ export default function MatchEntry() {
         body: JSON.stringify(formData),
       });
 
+      console.log("📩 サーバーからのレスポンスステータス:", res.status);
+
       if (res.ok) {
         alert("試合結果と画像を記録しました！⚽️");
         router.push("/match/history");
+      } else {
+        const errorData = await res.json().catch(() => ({}));
+        console.error("❌ 保存失敗詳細:", errorData);
+        alert("保存に失敗しました。ステータスコード: " + res.status);
       }
     } catch (err) {
-      alert("保存中にエラーがおきました。");
+      console.error("💥 通信エラー発生:", err);
+      alert("通信エラーがおきました。");
     } finally {
       setLoading(false);
     }
@@ -109,7 +114,6 @@ export default function MatchEntry() {
           </h1>
 
           <form onSubmit={handleSubmit} className="space-y-5">
-            {/* 基本情報、大会名、スコア入力はそのまま維持 */}
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-xs font-bold text-slate-500 mb-1">日付</label>
@@ -165,39 +169,21 @@ export default function MatchEntry() {
               </div>
             </div>
 
-            {/* --- 画像アップロードセクション --- */}
+            {/* 画像アップロード */}
             <div className="bg-slate-50 p-4 rounded-2xl border border-dashed border-slate-300">
-              <label className="block text-xs font-bold text-slate-500 mb-2 flex items-center gap-2">
-                📸 写真の追加（複数OK）
-              </label>
-              <input 
-                type="file" 
-                multiple 
-                accept="image/*" 
-                onChange={handleImageChange}
-                className="w-full text-xs text-slate-500 file:mr-3 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-bold file:bg-blue-100 file:text-blue-700 hover:file:bg-blue-200 cursor-pointer"
-              />
-              
-              {uploading && <p className="text-blue-600 text-[10px] mt-2 animate-pulse font-bold">⌛ アップロード中...</p>}
-
-              {/* プレビュー表示エリア */}
+              <label className="block text-xs font-bold text-slate-500 mb-2">📸 写真の追加（複数OK）</label>
+              <input type="file" multiple accept="image/*" onChange={handleImageChange} className="w-full text-xs text-slate-500 file:mr-3 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-bold file:bg-blue-100 file:text-blue-700" />
+              {uploading && <p className="text-blue-600 text-[10px] mt-2 animate-pulse font-bold text-center">⌛ アップロード中...</p>}
               <div className="grid grid-cols-3 gap-2 mt-4">
                 {formData.images.map((img, index) => (
-                  <div key={index} className="relative aspect-square rounded-lg overflow-hidden shadow-sm border border-slate-200 group">
+                  <div key={index} className="relative aspect-square rounded-lg overflow-hidden border border-slate-200 shadow-sm">
                     <img src={img.url} alt="preview" className="object-cover w-full h-full" />
-                    <button
-                      type="button"
-                      onClick={() => removeImage(index)}
-                      className="absolute top-0 right-0 bg-red-500/80 text-white w-6 h-6 flex items-center justify-center text-xs font-bold rounded-bl-lg hover:bg-red-600 transition-colors"
-                    >
-                      ✕
-                    </button>
+                    <button type="button" onClick={() => removeImage(index)} className="absolute top-0 right-0 bg-red-500/80 text-white w-6 h-6 flex items-center justify-center text-[10px] rounded-bl-lg">✕</button>
                   </div>
                 ))}
               </div>
             </div>
 
-            {/* 個人の成績 */}
             <div className="grid grid-cols-2 gap-4">
               <div className="bg-orange-50 p-3 rounded-2xl border border-orange-100">
                 <label className="block text-[10px] font-black text-orange-600 mb-1 uppercase">My Goal ⚽️</label>
@@ -209,7 +195,7 @@ export default function MatchEntry() {
               </div>
             </div>
 
-            <button disabled={loading || uploading} className="w-full py-4 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl font-black text-xl shadow-lg active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed">
+            <button disabled={loading || uploading} className="w-full py-4 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl font-black text-xl shadow-lg active:scale-95 transition-all disabled:opacity-50">
               {loading ? "保存中..." : "試合をきろくする"}
             </button>
           </form>
