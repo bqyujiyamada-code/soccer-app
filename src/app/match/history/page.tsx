@@ -60,7 +60,7 @@ export default function MatchHistory() {
 
   return (
     <div className="min-h-screen bg-slate-900 text-white font-sans pb-24">
-      {/* ヒーローヘッダー */}
+      {/* Heroheader */}
       <div className="relative h-64 bg-gradient-to-b from-blue-800 to-slate-900 flex flex-col items-center justify-center text-center px-4 overflow-hidden">
         <div className="absolute inset-0 opacity-10 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')]"></div>
         <h1 className="text-5xl font-black italic tracking-tighter mb-2 z-10 drop-shadow-lg text-white uppercase">
