@@ -4,45 +4,18 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 
-// --- 設定値・ロジック ---
 const UNIT_PRICES = [
   { upTo: 1000, price: 0.3 },
   { upTo: 5000, price: 0.4 },
   { upTo: 999999, price: 0.5 },
 ];
 
-// 新しい閾値の設定
-const RANK_THRESHOLDS = [
-  { threshold: 300, title: "ムードメーカー" },
-  { threshold: 800, title: "期待のサブメンバー" },
-  { threshold: 1500, title: "俊足のウイング" },
-  { threshold: 2500, title: "不動のスタメン" },
-  { threshold: 4000, title: "エリアの騎士" },
-  { threshold: 6000, title: "絶対的司令塔" },
-  { threshold: 8500, title: "伝説の10番" },
-  { threshold: 12000, title: "ファンタジスタ" },
-];
-
-const GET_RANK_INFO = (total: number) => {
-  const currentRank = [...RANK_THRESHOLDS].reverse().find(r => total >= r.threshold);
-  const nextRank = RANK_THRESHOLDS.find(r => total < r.threshold);
-  
-  const currentTitle = currentRank ? currentRank.title : "テスト生";
-  const nextTitle = nextRank ? nextRank.title : "極めし者";
-  const nextThreshold = nextRank ? nextRank.threshold : total;
-  const prevThreshold = currentRank ? currentRank.threshold : 0;
-  
-  // 進捗率の計算
-  const progress = nextRank 
-    ? ((total - prevThreshold) / (nextThreshold - prevThreshold)) * 100 
-    : 100;
-
-  return {
-    title: currentTitle,
-    nextTitle,
-    remaining: nextThreshold - total,
-    progress: Math.min(progress, 100)
-  };
+const GET_TITLE = (totalCount: number) => {
+  if (totalCount < 500) return "ルーキー候補生";
+  if (totalCount < 1500) return "期待の新星";
+  if (totalCount < 3000) return "チームの要";
+  if (totalCount < 6000) return "エリアの騎士";
+  return "伝説のファンタジスタ";
 };
 
 export default function LiftingEntry() {
@@ -52,6 +25,7 @@ export default function LiftingEntry() {
   const [memo, setMemo] = useState("");
   const [loading, setLoading] = useState(false);
   
+  // DBから取得するステータス
   const [userStats, setUserStats] = useState({
     bestCount: 0,
     totalCount: 0,
@@ -59,6 +33,7 @@ export default function LiftingEntry() {
     unpaidMoney: 0
   });
 
+  // 画面起動時にステータスを取得
   useEffect(() => {
     fetch("/api/get-lifting-stats")
       .then(res => res.json())
@@ -66,7 +41,6 @@ export default function LiftingEntry() {
       .catch(err => console.error("Stats fetch error:", err));
   }, []);
 
-  const rankInfo = GET_RANK_INFO(userStats.totalCount);
   const currentLevelPrice = UNIT_PRICES.find(p => userStats.totalCount <= p.upTo)?.price || 0.3;
   const isBestUpdate = Number(count) > userStats.bestCount;
   
@@ -115,30 +89,16 @@ export default function LiftingEntry() {
         
         <div className="absolute -top-10 -right-10 text-9xl opacity-10 rotate-12 pointer-events-none">⚽️</div>
 
-        <header className="text-center mb-4">
+        <header className="text-center mb-6">
           <div className="inline-block bg-green-500 text-slate-900 text-[10px] font-black px-3 py-1 rounded-full mb-2 uppercase tracking-tighter">
-            {rankInfo.title}
+            {GET_TITLE(userStats.totalCount)}
           </div>
           <h1 className="text-3xl font-black italic tracking-tighter text-white">
             LIFTING <span className="text-green-500">QUEST</span>
           </h1>
         </header>
 
-        {/* 📈 ランクアップ・進捗バーセクション */}
-        <div className="mb-6 bg-slate-900/40 p-3 rounded-2xl border border-slate-700/50">
-          <div className="flex justify-between text-[10px] font-black text-slate-400 mb-2 uppercase tracking-widest">
-            <span>Next: {rankInfo.nextTitle}</span>
-            <span className="text-green-500">あと {rankInfo.remaining.toLocaleString()}回</span>
-          </div>
-          <div className="w-full h-2.5 bg-slate-700 rounded-full overflow-hidden border border-slate-600">
-            <div 
-              className="h-full bg-gradient-to-r from-green-600 to-green-400 shadow-[0_0_10px_rgba(34,197,94,0.5)] transition-all duration-1000 ease-out"
-              style={{ width: `${rankInfo.progress}%` }}
-            />
-          </div>
-        </div>
-
-        {/* ステータスカード */}
+        {/* ステータスカード（ここがリアルタイムに！） */}
         <div className="grid grid-cols-3 gap-2 mb-8">
           <div className="bg-slate-700/50 p-3 rounded-2xl text-center border border-slate-600 shadow-inner">
             <p className="text-[10px] text-slate-400 font-bold uppercase">Best</p>
@@ -155,7 +115,6 @@ export default function LiftingEntry() {
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6 w-full box-border">
-          {/* 日付入力 */}
           <div className="w-full">
             <label className="block text-[10px] font-bold text-slate-500 mb-1 ml-1 uppercase tracking-widest">Training Date</label>
             <input 
@@ -166,7 +125,6 @@ export default function LiftingEntry() {
             />
           </div>
 
-          {/* 回数入力 */}
           <div className="w-full">
             <label className="block text-[10px] font-bold text-slate-500 mb-1 ml-1 uppercase tracking-widest">Max Count</label>
             <div className="relative w-full box-border">
@@ -186,7 +144,6 @@ export default function LiftingEntry() {
             )}
           </div>
 
-          {/* メモ */}
           <div className="w-full">
             <label className="block text-[10px] font-bold text-slate-500 mb-1 ml-1 uppercase tracking-widest">Training Memo</label>
             <textarea 
@@ -198,21 +155,19 @@ export default function LiftingEntry() {
             />
           </div>
 
-          {/* 報酬表示 */}
           <div className="bg-slate-900/50 rounded-2xl p-4 border border-slate-700 w-full box-border relative">
             <div className="flex justify-between items-center">
               <span className="text-slate-400 text-xs font-bold uppercase tracking-tight">Est. Reward</span>
-              <span className="text-3xl font-black text-white italic text-right">
+              <span className="text-3xl font-black text-white italic">
                 <small className="text-sm mr-1 text-green-500 not-italic">¥</small>
                 {calculateReward()}
               </span>
             </div>
             {(userStats.combo + 1) % 5 === 0 && Number(count) > 0 && (
-              <p className="text-[10px] text-orange-400 font-bold text-right mt-1 tracking-tighter uppercase">🔥 5-Day Combo Bonus Active (1.5x)</p>
+              <p className="text-[10px] text-orange-400 font-bold text-right mt-1 tracking-tighter">🔥 5-DAY COMBO BONUS (1.5x) ACTIVE!</p>
             )}
           </div>
 
-          {/* 保存ボタン */}
           <button 
             disabled={loading} 
             className="w-full py-5 bg-green-500 hover:bg-green-400 disabled:bg-slate-600 text-slate-900 rounded-2xl font-black text-2xl shadow-[0_0_20px_rgba(34,197,94,0.3)] active:scale-95 transition-all uppercase italic tracking-tighter"
@@ -222,7 +177,7 @@ export default function LiftingEntry() {
         </form>
 
         <div className="mt-8 text-center">
-           <Link href="/lifting/history" className="text-slate-500 font-bold hover:text-green-500 text-[10px] transition-colors tracking-widest uppercase">
+           <Link href="/lifting/history" className="text-slate-500 font-bold hover:text-green-500 text-xs transition-colors tracking-widest uppercase">
               View Recent Sessions →
            </Link>
         </div>

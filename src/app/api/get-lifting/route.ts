@@ -9,19 +9,19 @@ const client = new DynamoDBClient({
     secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!,
   },
 });
-
 const docClient = DynamoDBDocumentClient.from(client);
 
 export async function GET() {
   try {
     const command = new ScanCommand({
       TableName: "LiftingLogs",
-      // 必要に応じて特定のユーザーに絞り込む（今は全スキャンでソート）
+      // 1人運用ならScanで問題ありません。
+      // もし将来的に家族全員分を入れるなら FilterExpression を追加します。
     });
 
     const response = await docClient.send(command);
     
-    // 日付順（新しい順）にソート
+    // 日付順（新しい順）にソートして、フロントエンドに返却
     const sortedItems = response.Items?.sort((a, b) => b.date.localeCompare(a.date)) || [];
     
     return NextResponse.json(sortedItems);
