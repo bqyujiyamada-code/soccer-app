@@ -40,7 +40,7 @@ export default function LiftingHistory() {
     // 履歴と統計の両方を取得
     Promise.all([
       fetch("/api/get-lifting").then(res => res.json()),
-      fetch("/api/get-lifting-stats").then(res => res.json())
+      fetch("/api/getlifting-stats").then(res => res.json())
     ]).then(([logsData, statsData]) => {
       setLogs(logsData);
       setStats(statsData);
