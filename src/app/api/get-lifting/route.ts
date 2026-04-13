@@ -16,15 +16,17 @@ export async function GET() {
   try {
     const command = new ScanCommand({
       TableName: "LiftingLogs",
+      // 必要に応じて特定のユーザーに絞り込む（今は全スキャンでソート）
     });
 
     const response = await docClient.send(command);
-    // 日付順に並び替えて返す
+    
+    // 日付順（新しい順）にソート
     const sortedItems = response.Items?.sort((a, b) => b.date.localeCompare(a.date)) || [];
     
     return NextResponse.json(sortedItems);
   } catch (error) {
-    console.error(error);
+    console.error("Fetch Error:", error);
     return NextResponse.json({ error: "Failed to fetch" }, { status: 500 });
   }
 }
