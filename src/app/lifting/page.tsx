@@ -4,14 +4,12 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 
-// --- 設定値・ロジック ---
 const UNIT_PRICES = [
   { upTo: 1000, price: 0.3 },
   { upTo: 5000, price: 0.4 },
   { upTo: 999999, price: 0.5 },
 ];
 
-// 新しい閾値の設定
 const RANK_THRESHOLDS = [
   { threshold: 300, title: "ムードメーカー" },
   { threshold: 800, title: "期待のサブメンバー" },
@@ -26,23 +24,13 @@ const RANK_THRESHOLDS = [
 const GET_RANK_INFO = (total: number) => {
   const currentRank = [...RANK_THRESHOLDS].reverse().find(r => total >= r.threshold);
   const nextRank = RANK_THRESHOLDS.find(r => total < r.threshold);
-  
   const currentTitle = currentRank ? currentRank.title : "テスト生";
   const nextTitle = nextRank ? nextRank.title : "極めし者";
   const nextThreshold = nextRank ? nextRank.threshold : total;
   const prevThreshold = currentRank ? currentRank.threshold : 0;
-  
-  // 進捗率の計算
-  const progress = nextRank 
-    ? ((total - prevThreshold) / (nextThreshold - prevThreshold)) * 100 
-    : 100;
+  const progress = nextRank ? ((total - prevThreshold) / (nextThreshold - prevThreshold)) * 100 : 100;
 
-  return {
-    title: currentTitle,
-    nextTitle,
-    remaining: nextThreshold - total,
-    progress: Math.min(progress, 100)
-  };
+  return { title: currentTitle, nextTitle, remaining: nextThreshold - total, progress: Math.min(progress, 100) };
 };
 
 export default function LiftingEntry() {
@@ -60,7 +48,7 @@ export default function LiftingEntry() {
   });
 
   useEffect(() => {
-    fetch("/api/getlifting-stats")
+    fetch("/api/get-lifting-stats")
       .then(res => res.json())
       .then(data => setUserStats(data))
       .catch(err => console.error("Stats fetch error:", err));
@@ -115,16 +103,18 @@ export default function LiftingEntry() {
         
         <div className="absolute -top-10 -right-10 text-9xl opacity-10 rotate-12 pointer-events-none">⚽️</div>
 
-        <header className="text-center mb-4">
-          <div className="inline-block bg-green-500 text-slate-900 text-[10px] font-black px-3 py-1 rounded-full mb-2 uppercase tracking-tighter">
+        <header className="text-center mb-6">
+          <p className="text-[10px] font-black text-green-500 uppercase tracking-[0.3em] mb-1">Current Rank</p>
+          {/* 称号を大きく強調 */}
+          <h2 className="text-2xl font-black text-white bg-slate-700/50 inline-block px-6 py-2 rounded-2xl border border-slate-600 shadow-xl italic mb-4">
             {rankInfo.title}
-          </div>
-          <h1 className="text-3xl font-black italic tracking-tighter text-white">
-            LIFTING <span className="text-green-500">QUEST</span>
+          </h2>
+          <h1 className="text-sm font-black italic tracking-widest text-slate-500 block">
+            LIFTING <span className="text-green-500 text-lg">QUEST</span>
           </h1>
         </header>
 
-        {/* 📈 ランクアップ・進捗バーセクション */}
+        {/* ランクアップ進捗 */}
         <div className="mb-6 bg-slate-900/40 p-3 rounded-2xl border border-slate-700/50">
           <div className="flex justify-between text-[10px] font-black text-slate-400 mb-2 uppercase tracking-widest">
             <span>Next: {rankInfo.nextTitle}</span>
@@ -146,7 +136,8 @@ export default function LiftingEntry() {
           </div>
           <div className="bg-slate-700/50 p-3 rounded-2xl text-center border border-slate-600 shadow-inner">
             <p className="text-[10px] text-slate-400 font-bold uppercase">Combo</p>
-            <p className="text-xl font-black text-orange-400">{userStats.combo}d</p>
+            {/* 〇日表記に変更 */}
+            <p className="text-xl font-black text-orange-400">{userStats.combo}<span className="text-xs ml-0.5">日</span></p>
           </div>
           <div className="bg-slate-700/50 p-3 rounded-2xl text-center border border-slate-600 shadow-inner">
             <p className="text-[10px] text-slate-400 font-bold uppercase">Price</p>
@@ -155,7 +146,6 @@ export default function LiftingEntry() {
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6 w-full box-border">
-          {/* 日付入力 */}
           <div className="w-full">
             <label className="block text-[10px] font-bold text-slate-500 mb-1 ml-1 uppercase tracking-widest">Training Date</label>
             <input 
@@ -166,7 +156,6 @@ export default function LiftingEntry() {
             />
           </div>
 
-          {/* 回数入力 */}
           <div className="w-full">
             <label className="block text-[10px] font-bold text-slate-500 mb-1 ml-1 uppercase tracking-widest">Max Count</label>
             <div className="relative w-full box-border">
@@ -186,7 +175,6 @@ export default function LiftingEntry() {
             )}
           </div>
 
-          {/* メモ */}
           <div className="w-full">
             <label className="block text-[10px] font-bold text-slate-500 mb-1 ml-1 uppercase tracking-widest">Training Memo</label>
             <textarea 
@@ -198,21 +186,20 @@ export default function LiftingEntry() {
             />
           </div>
 
-          {/* 報酬表示 */}
+          {/* 未精算のおこづかい合計を表示 */}
           <div className="bg-slate-900/50 rounded-2xl p-4 border border-slate-700 w-full box-border relative">
             <div className="flex justify-between items-center">
-              <span className="text-slate-400 text-xs font-bold uppercase tracking-tight">Est. Reward</span>
+              <span className="text-slate-400 text-xs font-bold uppercase tracking-tight">未精算のおこづかい</span>
               <span className="text-3xl font-black text-white italic text-right">
                 <small className="text-sm mr-1 text-green-500 not-italic">¥</small>
-                {calculateReward()}
+                {userStats.unpaidMoney.toLocaleString()}
               </span>
             </div>
-            {(userStats.combo + 1) % 5 === 0 && Number(count) > 0 && (
-              <p className="text-[10px] text-orange-400 font-bold text-right mt-1 tracking-tighter uppercase">🔥 5-Day Combo Bonus Active (1.5x)</p>
-            )}
+            <p className="text-[9px] text-slate-500 font-bold text-right mt-1 uppercase tracking-tight">
+              ※今回の獲得予定: +¥{calculateReward()}
+            </p>
           </div>
 
-          {/* 保存ボタン */}
           <button 
             disabled={loading} 
             className="w-full py-5 bg-green-500 hover:bg-green-400 disabled:bg-slate-600 text-slate-900 rounded-2xl font-black text-2xl shadow-[0_0_20px_rgba(34,197,94,0.3)] active:scale-95 transition-all uppercase italic tracking-tighter"
@@ -221,9 +208,12 @@ export default function LiftingEntry() {
           </button>
         </form>
 
-        <div className="mt-8 text-center">
+        <div className="mt-8 text-center flex justify-between items-center px-2">
            <Link href="/lifting/history" className="text-slate-500 font-bold hover:text-green-500 text-[10px] transition-colors tracking-widest uppercase">
-              View Recent Sessions →
+              History →
+           </Link>
+           <Link href="/lifting/admin" className="text-slate-700 font-bold hover:text-yellow-600 text-[10px] transition-colors tracking-widest uppercase">
+              Admin (清算)
            </Link>
         </div>
       </div>
