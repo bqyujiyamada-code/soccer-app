@@ -9,7 +9,7 @@ export default function AdminSettle() {
   const router = useRouter();
 
   useEffect(() => {
-    fetch("/api/get-lifting-stats")
+    fetch("/api/getlifting-stats")
       .then(res => res.json())
       .then(data => {
         setStats(data);
