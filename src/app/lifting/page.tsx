@@ -60,7 +60,7 @@ export default function LiftingEntry() {
   });
 
   useEffect(() => {
-    fetch("/api/get-lifting-stats")
+    fetch("/api/getlifting-stats")
       .then(res => res.json())
       .then(data => setUserStats(data))
       .catch(err => console.error("Stats fetch error:", err));
