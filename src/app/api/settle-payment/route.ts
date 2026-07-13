@@ -1,22 +1,13 @@
-import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
-import { DynamoDBDocumentClient, ScanCommand, UpdateCommand } from "@aws-sdk/lib-dynamodb";
+import { ScanCommand, UpdateCommand } from "@aws-sdk/lib-dynamodb";
 import { NextResponse } from "next/server";
-
-const client = new DynamoDBClient({
-  region: "ap-northeast-1",
-  credentials: {
-    accessKeyId: process.env.AWS_ACCESS_KEY_ID!,
-    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!,
-  },
-});
-const docClient = DynamoDBDocumentClient.from(client);
-const USER_ID = "son_01";
+import { docClient } from "@/lib/dynamodb";
+import { LIFTING_LOGS_TABLE, LIFTING_STATS_TABLE, LIFTING_USER_ID } from "@/lib/constants";
 
 export async function POST() {
   try {
     // 1. 未精算のログを全取得
     const scanCommand = new ScanCommand({
-      TableName: "LiftingLogs",
+      TableName: LIFTING_LOGS_TABLE,
       FilterExpression: "#s <> :paid",
       ExpressionAttributeNames: { "#s": "status" },
       ExpressionAttributeValues: { ":paid": "paid" },
@@ -30,7 +21,7 @@ export async function POST() {
     // 2. 各ログを「paid」に更新
     for (const item of Items) {
       await docClient.send(new UpdateCommand({
-        TableName: "LiftingLogs",
+        TableName: LIFTING_LOGS_TABLE,
         Key: { date: item.date },
         UpdateExpression: "set #s = :paid",
         ExpressionAttributeNames: { "#s": "status" },
@@ -40,8 +31,8 @@ export async function POST() {
 
     // 3. Statsテーブルの未精算金額を0にする
     await docClient.send(new UpdateCommand({
-      TableName: "LiftingStats",
-      Key: { userId: USER_ID },
+      TableName: LIFTING_STATS_TABLE,
+      Key: { userId: LIFTING_USER_ID },
       UpdateExpression: "set unpaidMoney = :zero",
       ExpressionAttributeValues: { ":zero": 0 },
     }));

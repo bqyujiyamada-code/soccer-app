@@ -33,10 +33,11 @@ export async function POST(request: Request) {
     const signedUrl = await getSignedUrl(s3Client, command, { expiresIn: 60 });
 
     return NextResponse.json({ signedUrl, fileKey });
-  } catch (error: any) {
+  } catch (error) {
     console.error("S3 Presigned URL Error:", error);
+    const message = error instanceof Error ? error.message : "Unknown error";
     return NextResponse.json(
-      { error: "URL生成失敗", detail: error.message }, 
+      { error: "URL生成失敗", detail: message },
       { status: 500 }
     );
   }

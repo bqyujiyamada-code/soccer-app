@@ -1,20 +1,7 @@
-import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
-import { DynamoDBDocumentClient, PutCommand, GetCommand } from "@aws-sdk/lib-dynamodb";
+import { PutCommand, GetCommand } from "@aws-sdk/lib-dynamodb";
 import { NextResponse } from "next/server";
-
-// 1. AWS接続設定
-const client = new DynamoDBClient({
-  region: "ap-northeast-1",
-  credentials: {
-    accessKeyId: process.env.AWS_ACCESS_KEY_ID!,
-    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!,
-  },
-});
-
-const docClient = DynamoDBDocumentClient.from(client);
-
-// ユーザーIDは息子さん用で固定
-const USER_ID = "son_01";
+import { docClient } from "@/lib/dynamodb";
+import { LIFTING_LOGS_TABLE, LIFTING_STATS_TABLE, LIFTING_USER_ID } from "@/lib/constants";
 
 /**
  * リフティング保存API
@@ -29,7 +16,7 @@ export async function POST(request: Request) {
     // --- 1. 二重計上防止のための事前チェック ---
     // 今日すでにデータがあるか確認
     const getTodayLog = new GetCommand({
-      TableName: "LiftingLogs",
+      TableName: LIFTING_LOGS_TABLE,
       Key: { date: date },
     });
     const todayLogRes = await docClient.send(getTodayLog);
@@ -37,11 +24,11 @@ export async function POST(request: Request) {
 
     // --- 2. 累計ステータスの取得 ---
     const statsRes = await docClient.send(new GetCommand({
-      TableName: "LiftingStats",
-      Key: { userId: USER_ID },
+      TableName: LIFTING_STATS_TABLE,
+      Key: { userId: LIFTING_USER_ID },
     }));
-    const currentStats = statsRes.Item || { 
-      userId: USER_ID, 
+    const currentStats = statsRes.Item || {
+      userId: LIFTING_USER_ID,
       totalCount: 0, 
       unpaidMoney: 0, 
       bestCount: 0, 
@@ -76,10 +63,10 @@ export async function POST(request: Request) {
 
     // --- 5. LiftingLogs の保存（上書き） ---
     await docClient.send(new PutCommand({
-      TableName: "LiftingLogs",
+      TableName: LIFTING_LOGS_TABLE,
       Item: {
         date: date, // Partition Key
-        userId: USER_ID,
+        userId: LIFTING_USER_ID,
         count: numCount,
         memo: memo || "",
         earnedMoney: earnedMoney,
@@ -91,7 +78,7 @@ export async function POST(request: Request) {
 
     // --- 6. LiftingStats の更新 ---
     await docClient.send(new PutCommand({
-      TableName: "LiftingStats",
+      TableName: LIFTING_STATS_TABLE,
       Item: {
         ...currentStats,
         totalCount: currentStats.totalCount + diffCount,

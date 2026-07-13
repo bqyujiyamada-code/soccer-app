@@ -2,9 +2,10 @@
 "use client";
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { Match } from "@/lib/types";
 
 export default function MatchHistory() {
-  const [matches, setMatches] = useState<any[]>([]);
+  const [matches, setMatches] = useState<Match[]>([]);
   const [loading, setLoading] = useState(true);
 
   const fetchMatches = async () => {
@@ -41,6 +42,8 @@ export default function MatchHistory() {
       if (res.ok) {
         alert("削除しました");
         fetchMatches();
+      } else {
+        alert("削除に失敗しました");
       }
     } catch (err) {
       alert("通信エラーが発生しました");

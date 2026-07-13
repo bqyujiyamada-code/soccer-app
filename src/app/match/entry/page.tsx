@@ -4,6 +4,7 @@
 import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
+import { Match } from "@/lib/types";
 
 function MatchEntryForm() {
   const router = useRouter();
@@ -38,8 +39,8 @@ function MatchEntryForm() {
           const res = await fetch("/api/get-matches");
           if (!res.ok) throw new Error("一覧の取得に失敗しました");
           
-          const allMatches = await res.json();
-          const targetMatch = allMatches.find((m: any) => m.id === matchId);
+          const allMatches: Match[] = await res.json();
+          const targetMatch = allMatches.find((m) => m.id === matchId);
 
           if (targetMatch) {
             setFormData({

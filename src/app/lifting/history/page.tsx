@@ -1,38 +1,12 @@
 "use client";
 import { useEffect, useState } from "react";
 import Link from "next/link";
-
-// Entry画面と共通のランク設定
-const RANK_THRESHOLDS = [
-  { threshold: 300, title: "ムードメーカー" },
-  { threshold: 800, title: "期待のサブメンバー" },
-  { threshold: 1500, title: "俊足のウイング" },
-  { threshold: 2500, title: "不動のスタメン" },
-  { threshold: 4000, title: "エリアの騎士" },
-  { threshold: 6000, title: "絶対的司令塔" },
-  { threshold: 8500, title: "伝説の10番" },
-  { threshold: 12000, title: "ファンタジスタ" },
-];
-
-const GET_RANK_INFO = (total: number) => {
-  const currentRank = [...RANK_THRESHOLDS].reverse().find(r => total >= r.threshold);
-  const nextRank = RANK_THRESHOLDS.find(r => total < r.threshold);
-  
-  const currentTitle = currentRank ? currentRank.title : "テスト生";
-  const nextTitle = nextRank ? nextRank.title : "極めし者";
-  const nextThreshold = nextRank ? nextRank.threshold : total;
-  const prevThreshold = currentRank ? currentRank.threshold : 0;
-  
-  const progress = nextRank 
-    ? ((total - prevThreshold) / (nextThreshold - prevThreshold)) * 100 
-    : 100;
-
-  return { title: currentTitle, nextTitle, remaining: nextThreshold - total, progress: Math.min(progress, 100) };
-};
+import { getRankInfo } from "@/lib/rank";
+import { LiftingLog, LiftingStats } from "@/lib/types";
 
 export default function LiftingHistory() {
-  const [logs, setLogs] = useState<any[]>([]);
-  const [stats, setStats] = useState<any>(null);
+  const [logs, setLogs] = useState<LiftingLog[]>([]);
+  const [stats, setStats] = useState<LiftingStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [targetMonth, setTargetMonth] = useState(new Date().toISOString().slice(0, 7));
 
@@ -51,7 +25,7 @@ export default function LiftingHistory() {
   const filteredLogs = logs.filter(log => log.date.startsWith(targetMonth));
   const monthlyMax = filteredLogs.length > 0 ? Math.max(...filteredLogs.map(l => l.count)) : 0;
   const [year, month] = targetMonth.split("-");
-  const rankInfo = stats ? GET_RANK_INFO(stats.totalCount) : null;
+  const rankInfo = stats ? getRankInfo(stats.totalCount) : null;
 
   if (loading) return (
     <div className="min-h-screen bg-slate-900 flex items-center justify-center">
@@ -73,7 +47,7 @@ export default function LiftingHistory() {
               </div>
               <div className="text-right">
                 <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Total Count</p>
-                <p className="text-xl font-black text-white">{stats.totalCount.toLocaleString()}</p>
+                <p className="text-xl font-black text-white">{stats?.totalCount.toLocaleString()}</p>
               </div>
             </div>
             

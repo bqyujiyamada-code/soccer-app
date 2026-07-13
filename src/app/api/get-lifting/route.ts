@@ -1,20 +1,12 @@
-import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
-import { DynamoDBDocumentClient, ScanCommand } from "@aws-sdk/lib-dynamodb";
+import { ScanCommand } from "@aws-sdk/lib-dynamodb";
 import { NextResponse } from "next/server";
-
-const client = new DynamoDBClient({
-  region: "ap-northeast-1",
-  credentials: {
-    accessKeyId: process.env.AWS_ACCESS_KEY_ID!,
-    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!,
-  },
-});
-const docClient = DynamoDBDocumentClient.from(client);
+import { docClient } from "@/lib/dynamodb";
+import { LIFTING_LOGS_TABLE } from "@/lib/constants";
 
 export async function GET() {
   try {
     const command = new ScanCommand({
-      TableName: "LiftingLogs",
+      TableName: LIFTING_LOGS_TABLE,
       // 1人運用ならScanで問題ありません。
       // もし将来的に家族全員分を入れるなら FilterExpression を追加します。
     });

@@ -1,29 +1,19 @@
-import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
-import { DynamoDBDocumentClient, GetCommand } from "@aws-sdk/lib-dynamodb";
+import { GetCommand } from "@aws-sdk/lib-dynamodb";
 import { NextResponse } from "next/server";
-
-const client = new DynamoDBClient({
-  region: "ap-northeast-1",
-  credentials: {
-    accessKeyId: process.env.AWS_ACCESS_KEY_ID!,
-    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!,
-  },
-});
-const docClient = DynamoDBDocumentClient.from(client);
-
-const USER_ID = "son_01"; // 固定ID
+import { docClient } from "@/lib/dynamodb";
+import { LIFTING_STATS_TABLE, LIFTING_USER_ID } from "@/lib/constants";
 
 export async function GET() {
   try {
     const command = new GetCommand({
-      TableName: "LiftingStats",
-      Key: { userId: USER_ID },
+      TableName: LIFTING_STATS_TABLE,
+      Key: { userId: LIFTING_USER_ID },
     });
     const response = await docClient.send(command);
-    
+
     // データがない場合（初回など）は0埋めの初期値を返す
     const stats = response.Item || {
-      userId: USER_ID,
+      userId: LIFTING_USER_ID,
       totalCount: 0,
       bestCount: 0,
       combo: 0,

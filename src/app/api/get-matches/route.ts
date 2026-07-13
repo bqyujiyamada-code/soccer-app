@@ -1,16 +1,6 @@
 import { NextResponse } from "next/server";
-import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
-import { DynamoDBDocumentClient, ScanCommand } from "@aws-sdk/lib-dynamodb";
-
-const client = new DynamoDBClient({
-  region: process.env.AWS_REGION || "ap-northeast-1",
-  credentials: {
-    accessKeyId: process.env.AWS_ACCESS_KEY_ID!,
-    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!,
-  },
-});
-
-const docClient = DynamoDBDocumentClient.from(client);
+import { ScanCommand } from "@aws-sdk/lib-dynamodb";
+import { docClient } from "@/lib/dynamodb";
 
 export async function GET() {
   try {
@@ -33,10 +23,11 @@ export async function GET() {
     });
 
     return NextResponse.json(sortedItems);
-  } catch (error: any) {
+  } catch (error) {
     console.error("DynamoDB Fetch Error:", error);
+    const message = error instanceof Error ? error.message : "Unknown error";
     return NextResponse.json(
-      { error: "データの取得に失敗しました", detail: error.message },
+      { error: "データの取得に失敗しました", detail: message },
       { status: 500 }
     );
   }

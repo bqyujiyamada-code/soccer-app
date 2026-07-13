@@ -1,17 +1,7 @@
 import { NextResponse } from "next/server";
-import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
-import { DynamoDBDocumentClient, PutCommand } from "@aws-sdk/lib-dynamodb";
+import { PutCommand } from "@aws-sdk/lib-dynamodb";
 import { v4 as uuidv4 } from "uuid";
-
-const client = new DynamoDBClient({
-  region: process.env.AWS_REGION || "ap-northeast-1",
-  credentials: {
-    accessKeyId: process.env.AWS_ACCESS_KEY_ID!,
-    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!,
-  },
-});
-
-const docClient = DynamoDBDocumentClient.from(client);
+import { docClient } from "@/lib/dynamodb";
 
 export async function POST(request: Request) {
   try {
@@ -37,14 +27,18 @@ export async function POST(request: Request) {
     await docClient.send(command);
 
     return NextResponse.json({ message: "Success" });
-  } catch (error: any) {
+  } catch (error) {
     console.error("DynamoDB Save Error:", error);
+    const message = error instanceof Error ? error.message : "Unknown error";
+    const code = error && typeof error === "object" && "__type" in error
+      ? (error as { __type?: string }).__type
+      : undefined;
     return NextResponse.json(
-      { 
-        error: "保存失敗", 
-        detail: error.message,
-        code: error.__type // AWS特有のエラーコードを返す
-      }, 
+      {
+        error: "保存失敗",
+        detail: message,
+        code, // AWS特有のエラーコードを返す
+      },
       { status: 500 }
     );
   }

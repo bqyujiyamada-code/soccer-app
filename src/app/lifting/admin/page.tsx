@@ -1,9 +1,10 @@
 "use client";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { LiftingStats } from "@/lib/types";
 
 export default function AdminSettle() {
-  const [stats, setStats] = useState<any>(null);
+  const [stats, setStats] = useState<LiftingStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [settling, setSettling] = useState(false);
   const router = useRouter();
@@ -18,7 +19,7 @@ export default function AdminSettle() {
   }, []);
 
   const handleSettle = async () => {
-    if (!confirm(`¥${stats.unpaidMoney} を清算してよろしいですか？`)) return;
+    if (!confirm(`¥${stats?.unpaidMoney} を清算してよろしいですか？`)) return;
     
     setSettling(true);
     try {
