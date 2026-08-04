@@ -42,3 +42,28 @@ export interface LiftingStats {
   lastDate?: string;
   lastUpdated?: string;
 }
+
+export type TrainingDayType = "full" | "partial" | "none";
+
+export interface TrainingLog {
+  date: string;
+  userId: string;
+  stretchDone: boolean;
+  practiceDone: boolean;
+  dayType: TrainingDayType;
+  streakDay: number; // dayType==="full"の日のみ意味を持つ連続日数(1始まり)。それ以外は0
+  memo: string;
+  earnedMoney: number;
+  status: "paid" | "unpaid";
+  createdAt: string;
+}
+
+export interface TrainingStats {
+  userId: string;
+  streak: number;
+  longestStreak: number;
+  unpaidMoney: number;
+  lastDate?: string;
+  lastDayType?: TrainingDayType;
+  lastUpdated?: string;
+}
